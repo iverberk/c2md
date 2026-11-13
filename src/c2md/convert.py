@@ -178,7 +178,7 @@ class Converter:
         data = []
         for row in rows:
             cells = row.find_all(["td", "th"], recursive=False)
-            data.append([re.sub(r"\s+", " ", cell.get_text(" ", strip=True)).replace("|", r"\|") for cell in cells])
+            data.append([self._table_cell(cell) for cell in cells])
         width = max(map(len, data), default=0)
         if not width:
             return ""
@@ -193,6 +193,14 @@ class Converter:
         if table.find(["table", "ac:structured-macro", "ac:image"]):
             self._warn("Table contains rich content that may not be preserved.")
         return "\n".join(lines)
+
+    def _table_cell(self, cell: Tag) -> str:
+        content = "".join(
+            self._inline_children(child) + " " if isinstance(child, Tag) and _name(child) in {"p", "div"}
+            else self._inline(child)
+            for child in cell.children
+        )
+        return re.sub(r"\s+", " ", content).strip().replace("|", r"\|")
 
     def _macro(self, node: Tag) -> str:
         name = node.get("ac:name", "unknown")

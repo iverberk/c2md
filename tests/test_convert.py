@@ -40,6 +40,23 @@ class ConversionTests(unittest.TestCase):
         self.assertEqual(self.converter.warnings, ["Table has merged cells; verify its columns and rows."])
         self.assertIn('```python\nprint("hi")\n```', result)
 
+    def test_table_links_preserve_targets_and_cell_formatting(self):
+        storage = (
+            '<table><tr><th><p>Item</p></th><th>Reference</th></tr>'
+            '<tr><td><p><ac:link><ri:page ri:content-title="Other Page"/>'
+            '<ac:plain-text-link-body>Confluence</ac:plain-text-link-body></ac:link></p></td>'
+            '<td><p>See <a href="https://example.com/docs">docs</a> and <strong>notes</strong></p></td></tr>'
+            '<tr><td>value | other</td><td><ac:link><ri:attachment ri:filename="pic.png"/>'
+            '</ac:link></td></tr></table>'
+        )
+        self.assertEqual(
+            self.converter.convert(storage),
+            '| Item | Reference |\n| --- | --- |\n'
+            '| [Confluence](https://example.com/DOC/Other%20Page) | See [docs](https://example.com/docs) and **notes** |\n'
+            '| value \\| other | [pic.png](assets/pic.png) |\n',
+        )
+        self.assertEqual(self.converter.warnings, [])
+
     def test_missing_image_does_not_emit_warning(self):
         result = self.converter.convert('<ac:image><ri:attachment ri:filename="missing.png"/></ac:image>')
         self.assertEqual(result, "missing.png\n")
