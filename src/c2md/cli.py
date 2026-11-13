@@ -96,8 +96,6 @@ def _export(client: ConfluenceClient, page: dict, output: Path, force: bool) -> 
 
     converter = Converter(client.base_url, page.get("space", {}).get("key", ""), client.page_link, save_attachment)
     markdown = converter.convert(storage)
-    if download_warnings:
-        markdown += "\n" + "\n".join(f"**Conversion warning:** {warning}" for warning in download_warnings) + "\n"
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(markdown, encoding="utf-8")
     return len(converter.warnings) + len(download_warnings), len([name for name in used if used[name]])

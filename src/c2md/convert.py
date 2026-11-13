@@ -32,7 +32,7 @@ class Converter:
 
     def _warn(self, message: str) -> str:
         self.warnings.append(message)
-        return f"**Conversion warning:** {message}"
+        return ""
 
     def convert(self, storage: str) -> str:
         soup = BeautifulSoup(storage, "html.parser")
@@ -74,7 +74,8 @@ class Converter:
         if name in {"ac:image", "ac:link", "img"}:
             return self._inline(node)
         text = self._blocks(list(node.children)) if node.contents else _escape(node.get_text(" ", strip=True))
-        return (text + "\n\n" if text else "") + self._warn(f"Unsupported {name} element; check its formatting.")
+        self._warn(f"Unsupported {name} element; check its formatting.")
+        return text
 
     def _inline_children(self, node: Tag) -> str:
         return "".join(self._inline(child) for child in node.children)
@@ -112,8 +113,10 @@ class Converter:
         if name in {"span", "ac:plain-text-link-body", "ac:link-body", "sub", "sup"}:
             return content
         if name == "ac:placeholder":
-            return content + " " + self._warn("Placeholder content may need editing.")
-        return content + " " + self._warn(f"Unsupported inline {name} element; check its formatting.")
+            self._warn("Placeholder content may need editing.")
+            return content
+        self._warn(f"Unsupported inline {name} element; check its formatting.")
+        return content
 
     def _link(self, node: Tag) -> str:
         body = node.find(["ac:plain-text-link-body", "ac:link-body"], recursive=False)
@@ -134,7 +137,8 @@ class Converter:
             target = url.get("ri:value", "")
             label = label or _escape(target)
         if not target:
-            return label + " " + self._warn("Link target could not be resolved.")
+            self._warn("Link target could not be resolved.")
+            return label
         anchor = node.get("ac:anchor", "")
         if anchor:
             target += "#" + anchor.replace(" ", "%20")
@@ -148,7 +152,8 @@ class Converter:
             filename = attachment.get("ri:filename", "")
             target = self.attachment(filename)
             if not target:
-                return _escape(filename) + " " + self._warn(f"Image attachment {filename!r} was not available.")
+                self._warn(f"Image attachment {filename!r} was not available.")
+                return _escape(filename)
             return f"![{alt or _escape(filename)}]({target})"
         if url:
             return f"![{alt}]({url.get('ri:value', '')})"
@@ -184,9 +189,9 @@ class Converter:
         lines = ["| " + " | ".join(header) + " |", "| " + " | ".join(["---"] * width) + " |"]
         lines.extend("| " + " | ".join(row) + " |" for row in (data[1:] if has_header else data))
         if merged:
-            lines.append("\n" + self._warn("Table has merged cells; verify its columns and rows."))
+            self._warn("Table has merged cells; verify its columns and rows.")
         if table.find(["table", "ac:structured-macro", "ac:image"]):
-            lines.append("\n" + self._warn("Table contains rich content that may not be preserved."))
+            self._warn("Table contains rich content that may not be preserved.")
         return "\n".join(lines)
 
     def _macro(self, node: Tag) -> str:
@@ -200,15 +205,18 @@ class Converter:
             return f"{fence}{language}\n{code}\n{fence}"
         text = self._blocks(list(rich.children)) if rich else _escape(plain.get_text()) if plain else ""
         if name in {"info", "note", "tip", "warning", "panel"}:
-            return f"**{name.capitalize()}:** {text}\n\n" + self._warn(f"{name} panel styling was simplified.")
-        return (text + "\n\n" if text else "") + self._warn(f"Macro {name!r} may need manual conversion.")
+            self._warn(f"{name} panel styling was simplified.")
+            return f"**{name.capitalize()}:** {text}"
+        self._warn(f"Macro {name!r} may need manual conversion.")
+        return text
 
     def _layout(self, node: Tag) -> str:
         sections = []
         for section in node.find_all("ac:layout-section", recursive=False):
             columns = section.find_all("ac:layout-cell", recursive=False)
             sections.append("\n\n".join(self._blocks(list(col.children)) for col in columns))
-        return "\n\n".join(filter(None, sections)) + "\n\n" + self._warn("Multi-column layout was flattened into reading order.")
+        self._warn("Multi-column layout was flattened into reading order.")
+        return "\n\n".join(filter(None, sections))
 
     def _tasks(self, node: Tag) -> str:
         lines = []

@@ -36,6 +36,27 @@ class CliTests(unittest.TestCase):
             with self.assertRaises(ConfluenceError):
                 _export(FakeClient(), page, output, False)
 
+    def test_export_missing_and_failed_attachments_have_no_markdown_warnings(self):
+        class FailedClient(FakeClient):
+            def attachments(self, page_id):
+                return {"broken.png": {"id": "43"}}
+
+            def download(self, attachment):
+                raise ConfluenceError("download failed")
+
+        page = {
+            "id": "123", "space": {"key": "DOC"},
+            "body": {"storage": {"value": (
+                '<ac:image><ri:attachment ri:filename="missing.png"/></ac:image>'
+                '<ac:image><ri:attachment ri:filename="broken.png"/></ac:image>'
+            )}},
+        }
+        with tempfile.TemporaryDirectory(dir=Path.cwd()) as temp:
+            output = Path(temp) / "example.md"
+            warnings, count = _export(FailedClient(), page, output, False)
+            self.assertEqual((warnings, count), (4, 0))
+            self.assertEqual(output.read_text(), "missing.png\n\nbroken.png\n")
+
     def test_script_requires_token_without_terminal(self):
         old = os.environ.pop("C2MD_TOKEN", None)
         try:

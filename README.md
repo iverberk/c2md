@@ -20,7 +20,7 @@ c2md 12345 --base-url https://confluence.example.com/confluence -o page.md
 
 Referenced attachments are downloaded into a folder alongside the Markdown file (for example, `page_assets/`). Existing output is protected unless you pass `--force`. Confluence page links remain links to Confluence. Only files explicitly referenced in the page are downloaded.
 
-Headings, paragraphs, lists, links, images, code, tasks, and simple tables become Markdown. Unsupported macros retain any available text followed by a **Conversion warning**. Multi-column layouts become sequential text with a warning; Markdown cannot display columns side by side. Merged table cells and rich table contents get a warning because their formatting may need manual repair. Embedded HTML is never emitted intentionally.
+Headings, paragraphs, lists, links, images, code, tasks, and simple tables become Markdown. Unsupported macros retain any available text. Multi-column layouts become sequential text; Markdown cannot display columns side by side. Merged table cells and rich table contents may need manual repair. Conversion warnings are counted in the CLI summary, never written into the Markdown. Embedded HTML is never emitted intentionally.
 
 ## Develop
 
