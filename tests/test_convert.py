@@ -110,6 +110,23 @@ class ConversionTests(unittest.TestCase):
             '|  |\n| --- |\n| Tip: table text |\n\n> Warning: quoted text\n',
         )
 
+    def test_stray_single_backtick_lines_after_code_fence_are_removed(self):
+        markdown = '```python\nprint("`")\n```\n\n`\n\n`\n\nAfter\n\n```\nother\n```\n`'
+        self.assertEqual(
+            self.converter._remove_stray_code_ticks(markdown),
+            '```python\nprint("`")\n```\n\nAfter\n\n```\nother\n```\n`',
+        )
+        self.assertEqual(
+            self.converter._remove_stray_code_ticks('```\n`\n`\n```\n`\n`'),
+            '```\n`\n`\n```',
+        )
+
+    def test_code_macro_only_emits_its_fence(self):
+        storage = ('<ac:structured-macro ac:name="code">'
+                   '<ac:plain-text-body><![CDATA[print("hi")]]></ac:plain-text-body>'
+                   '</ac:structured-macro>')
+        self.assertEqual(self.converter.convert(storage), '```\nprint("hi")\n```\n')
+
 
 if __name__ == "__main__":
     unittest.main()

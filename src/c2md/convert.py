@@ -37,7 +37,37 @@ class Converter:
     def convert(self, storage: str) -> str:
         soup = BeautifulSoup(storage, "html.parser")
         markdown = self._blocks(soup.contents).strip()
-        return self._admonitions(markdown) + "\n"
+        return self._admonitions(self._remove_stray_code_ticks(markdown)) + "\n"
+
+    def _remove_stray_code_ticks(self, markdown: str) -> str:
+        lines = markdown.splitlines()
+        result = []
+        fence = 0
+        index = 0
+        while index < len(lines):
+            line = lines[index]
+            result.append(line)
+            if fence:
+                if line.startswith("`" * fence) and re.fullmatch(r"`{3,}\s*", line):
+                    fence = 0
+                    following = index + 1
+                    for _ in range(2):
+                        while following < len(lines) and not lines[following].strip():
+                            following += 1
+                        if following == len(lines) or lines[following].strip() != "`":
+                            break
+                        following += 1
+                    else:
+                        while following < len(lines) and not lines[following].strip():
+                            following += 1
+                        if following < len(lines):
+                            result.append("")
+                        index = following
+                        continue
+            elif match := re.fullmatch(r"(`{3,})[^`]*", line):
+                fence = len(match.group(1))
+            index += 1
+        return "\n".join(result)
 
     def _admonitions(self, markdown: str) -> str:
         lines = markdown.splitlines()
