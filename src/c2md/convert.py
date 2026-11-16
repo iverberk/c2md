@@ -36,7 +36,39 @@ class Converter:
 
     def convert(self, storage: str) -> str:
         soup = BeautifulSoup(storage, "html.parser")
-        return self._blocks(soup.contents).strip() + "\n"
+        markdown = self._blocks(soup.contents).strip()
+        return self._admonitions(markdown) + "\n"
+
+    def _admonitions(self, markdown: str) -> str:
+        lines = markdown.splitlines()
+        result = []
+        fence = 0
+        index = 0
+        while index < len(lines):
+            line = lines[index]
+            if fence:
+                result.append(line)
+                if line.startswith("`" * fence) and re.fullmatch(r"`{3,}\s*", line):
+                    fence = 0
+            elif match := re.fullmatch(r"(`{3,})[^`]*", line):
+                fence = len(match.group(1))
+                result.append(line)
+            elif match := re.fullmatch(r"(?:\*\*(Tip|Warning):\*\*|(Tip|Warning):)\s*(.*)", line):
+                text = match.group(3)
+                if text or (index + 1 < len(lines) and lines[index + 1].strip()):
+                    result.append(":::" + (match.group(1) or match.group(2)).lower())
+                    if text:
+                        result.append(text)
+                    while index + 1 < len(lines) and lines[index + 1].strip():
+                        index += 1
+                        result.append(lines[index])
+                    result.append(":::")
+                else:
+                    result.append(line)
+            else:
+                result.append(line)
+            index += 1
+        return "\n".join(result)
 
     def _blocks(self, nodes: list) -> str:
         return "\n\n".join(part for node in nodes if (part := self._block(node).strip()))

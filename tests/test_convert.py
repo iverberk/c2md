@@ -70,6 +70,46 @@ class ConversionTests(unittest.TestCase):
         self.assertEqual(self.converter.convert(storage), "A draft text missing.png\n\nKept\n\n**Note:** Notice\n")
         self.assertEqual(len(self.converter.warnings), 6)
 
+    def test_tip_and_warning_wrap_text_until_blank_line(self):
+        storage = (
+            '<p>Intro</p><p>Tip: Use <strong>care</strong>.<br/>Keep this line too.</p>'
+            '<p>Outside the tip.</p><p>Warning:</p>'
+            '<p>Outside the warning after a blank line.</p>'
+            '<p>Warning:<br/>Take a break.<br/>Then resume.</p>'
+        )
+        self.assertEqual(
+            self.converter.convert(storage),
+            'Intro\n\n:::tip\nUse **care**.  \nKeep this line too.\n:::\n\n'
+            'Outside the tip.\n\nWarning:\n\nOutside the warning after a blank line.\n\n'
+            ':::warning\nTake a break.  \nThen resume.\n:::\n',
+        )
+
+    def test_tip_and_warning_panels_use_admonitions(self):
+        storage = (
+            '<ac:structured-macro ac:name="tip"><ac:rich-text-body>'
+            '<p>Helpful <a href="https://example.com">link</a></p>'
+            '</ac:rich-text-body></ac:structured-macro>'
+            '<ac:structured-macro ac:name="warning"><ac:rich-text-body>'
+            '<p>Be careful</p></ac:rich-text-body></ac:structured-macro>'
+        )
+        self.assertEqual(
+            self.converter.convert(storage),
+            ':::tip\nHelpful [link](https://example.com)\n:::\n\n:::warning\nBe careful\n:::\n',
+        )
+        self.assertEqual(len(self.converter.warnings), 2)
+
+    def test_code_fences_and_table_cells_are_not_admonitions(self):
+        storage = (
+            '<pre>Tip:\nDo not reformat\n\nWarning:\nKeep this code</pre>'
+            '<table><tr><td>Tip: table text</td></tr></table>'
+            '<blockquote><p>Warning: quoted text</p></blockquote>'
+        )
+        self.assertEqual(
+            self.converter.convert(storage),
+            '```\nTip:\nDo not reformat\n\nWarning:\nKeep this code\n```\n\n'
+            '|  |\n| --- |\n| Tip: table text |\n\n> Warning: quoted text\n',
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
