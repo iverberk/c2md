@@ -145,6 +145,37 @@ class ConversionTests(unittest.TestCase):
                    '</ac:structured-macro>')
         self.assertEqual(self.converter.convert(storage), '```\nprint("hi")\n```\n')
 
+    def test_table_of_contents_macros_are_omitted(self):
+        storage = (
+            '<ac:structured-macro ac:name="toc"><ac:rich-text-body>'
+            '<p>Table of Contents</p><p>Overview</p>'
+            '</ac:rich-text-body></ac:structured-macro>'
+            '<h1>Overview</h1><p>Content</p>'
+            '<p><ac:structured-macro ac:name="table-of-contents"/></p>'
+        )
+        self.assertEqual(self.converter.convert(storage), '# Overview\n\nContent\n')
+        self.assertEqual(self.converter.warnings, [])
+
+    def test_trailing_table_of_contents_navigation_is_omitted(self):
+        storage = (
+            '<h1>Overview</h1><p>Content</p><h2>Table of Contents</h2>'
+            '<ul><li><a href="#overview">Overview</a></li>'
+            '<li><a href="#details">Details</a></li></ul>'
+        )
+        self.assertEqual(self.converter.convert(storage), '# Overview\n\nContent\n')
+        self.assertEqual(
+            self.converter.convert('<p>Content</p><p><strong>Table of Contents:</strong></p>'
+                                   '<ul><li><a href="#content">Content</a></li></ul>'),
+            'Content\n',
+        )
+
+    def test_table_of_contents_prose_is_preserved(self):
+        storage = '<h2>Table of Contents</h2><p>This section explains the document structure.</p>'
+        self.assertEqual(
+            self.converter.convert(storage),
+            '## Table of Contents\n\nThis section explains the document structure.\n',
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

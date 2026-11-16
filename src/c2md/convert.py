@@ -37,7 +37,29 @@ class Converter:
     def convert(self, storage: str) -> str:
         soup = BeautifulSoup(storage, "html.parser")
         markdown = self._blocks(soup.contents).strip()
-        return self._admonitions(self._remove_stray_code_ticks(markdown)) + "\n"
+        markdown = self._admonitions(self._remove_stray_code_ticks(markdown))
+        return self._remove_trailing_toc(markdown) + "\n"
+
+    def _remove_trailing_toc(self, markdown: str) -> str:
+        lines = markdown.splitlines()
+        headings = []
+        fence = 0
+        for index, line in enumerate(lines):
+            if fence:
+                if line.startswith("`" * fence) and re.fullmatch(r"`{3,}\s*", line):
+                    fence = 0
+            elif match := re.fullmatch(r"(`{3,})[^`]*", line):
+                fence = len(match.group(1))
+            elif re.fullmatch(
+                r"(?:#{1,6}\s+Table of Contents:?|\*\*Table of Contents:?\*\*|Table of Contents:?)",
+                line, re.IGNORECASE,
+            ):
+                headings.append(index)
+        for index in reversed(headings):
+            entries = [line.strip() for line in lines[index + 1:] if line.strip()]
+            if not entries or all(re.fullmatch(r"(?:[-*]|\d+\.)\s+\[.+\]\([^)]+\)", entry) for entry in entries):
+                return "\n".join(lines[:index]).rstrip()
+        return markdown
 
     def _remove_stray_code_ticks(self, markdown: str) -> str:
         lines = markdown.splitlines()
@@ -266,6 +288,8 @@ class Converter:
 
     def _macro(self, node: Tag) -> str:
         name = node.get("ac:name", "unknown")
+        if name in {"toc", "table-of-contents"}:
+            return ""
         plain = node.find("ac:plain-text-body", recursive=False)
         rich = node.find("ac:rich-text-body", recursive=False)
         if name == "code" and plain:
