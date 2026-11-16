@@ -67,7 +67,7 @@ class ConversionTests(unittest.TestCase):
                    '<ac:link><ri:attachment ri:filename="missing.png"/></ac:link></p>'
                    '<script>ignored</script><other><p>Kept</p></other>'
                    '<ac:structured-macro ac:name="note"><ac:rich-text-body><p>Notice</p></ac:rich-text-body></ac:structured-macro>')
-        self.assertEqual(self.converter.convert(storage), "A draft text missing.png\n\nKept\n\n**Note:** Notice\n")
+        self.assertEqual(self.converter.convert(storage), "A draft text missing.png\n\nKept\n\n:::note\nNotice\n:::\n")
         self.assertEqual(len(self.converter.warnings), 6)
 
     def test_tip_and_warning_wrap_text_until_blank_line(self):
@@ -95,6 +95,24 @@ class ConversionTests(unittest.TestCase):
         self.assertEqual(
             self.converter.convert(storage),
             ':::tip\nHelpful [link](https://example.com)\n:::\n\n:::warning\nBe careful\n:::\n',
+        )
+        self.assertEqual(len(self.converter.warnings), 2)
+
+    def test_note_and_info_text_and_panels_use_admonitions(self):
+        storage = (
+            '<p>Note: Remember <strong>this</strong>.<br/>And this.</p>'
+            '<p>After the note.</p>'
+            '<p>Info: More details.</p>'
+            '<ac:structured-macro ac:name="info"><ac:rich-text-body>'
+            '<p>Panel details</p></ac:rich-text-body></ac:structured-macro>'
+            '<ac:structured-macro ac:name="note"><ac:rich-text-body>'
+            '<p>Panel reminder</p></ac:rich-text-body></ac:structured-macro>'
+        )
+        self.assertEqual(
+            self.converter.convert(storage),
+            ':::note\nRemember **this**.  \nAnd this.\n:::\n\nAfter the note.\n\n'
+            ':::info\nMore details.\n:::\n\n:::info\nPanel details\n:::\n\n'
+            ':::note\nPanel reminder\n:::\n',
         )
         self.assertEqual(len(self.converter.warnings), 2)
 

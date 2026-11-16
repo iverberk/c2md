@@ -83,7 +83,7 @@ class Converter:
             elif match := re.fullmatch(r"(`{3,})[^`]*", line):
                 fence = len(match.group(1))
                 result.append(line)
-            elif match := re.fullmatch(r"(?:\*\*(Tip|Warning):\*\*|(Tip|Warning):)\s*(.*)", line):
+            elif match := re.fullmatch(r"(?:\*\*(Tip|Warning|Note|Info):\*\*|(Tip|Warning|Note|Info):)\s*(.*)", line):
                 text = match.group(3)
                 if text or (index + 1 < len(lines) and lines[index + 1].strip()):
                     result.append(":::" + (match.group(1) or match.group(2)).lower())
